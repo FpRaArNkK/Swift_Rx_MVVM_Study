@@ -7,6 +7,8 @@
 
 import Foundation
 import UIKit
+import Combine
+import CombineCocoa
 
 class SplitInputView: UIView {
     
@@ -17,13 +19,17 @@ class SplitInputView: UIView {
     }()
     
     private lazy var decreamentButton: UIButton = {
-        let buttton = buildButton(text: "-", corners: [.layerMinXMaxYCorner, .layerMinXMinYCorner])
-        return buttton
+        let button = buildButton(text: "-", corners: [.layerMinXMaxYCorner, .layerMinXMinYCorner])
+        return button
     }()
     
     private lazy var increamentButton: UIButton = {
-        let buttton = buildButton(text: "+", corners: [.layerMaxXMinYCorner, .layerMaxXMaxYCorner])
-        return buttton
+        let button = buildButton(text: "+", corners: [.layerMaxXMinYCorner, .layerMaxXMaxYCorner])
+        button.tapPublisher.flatMap { [unowned self] _ in
+            Just(self.splitSubject.value + 1)
+        }.assign(to: \.value, on: splitSubject)
+            .store(in: &cancellables)
+        return button
     }()
     
     private lazy var quantityLabel: UILabel = {
@@ -41,6 +47,14 @@ class SplitInputView: UIView {
         stackView.spacing = 0
         return stackView
     }()
+    
+    private let splitSubject: CurrentValueSubject<Int, Never> = .init(1) //another way to init with default value
+    
+    var valuePublisher: AnyPublisher<Int, Never> {
+        return splitSubject.eraseToAnyPublisher()
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
     
     init() {
         super.init(frame: .zero)
